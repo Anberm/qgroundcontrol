@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "LandingComplexItem.h"
 #include "QGCApplication.h"
 #include "JsonHelper.h"
@@ -49,6 +40,12 @@ void LandingComplexItem::_init(void)
     connect(loiterClockwise(),          &Fact::rawValueChanged,                             this, &LandingComplexItem::_recalcFromRadiusChange);
 
     connect(useLoiterToAlt(),           &Fact::rawValueChanged,                             this, &LandingComplexItem::_recalcFromApproachModeChange);
+
+    connect(this,                       &LandingComplexItem::finalApproachCoordinateChanged,this, &LandingComplexItem::entryCoordinateChanged);
+    connect(this,                       &LandingComplexItem::landingCoordinateChanged,      this, &LandingComplexItem::exitCoordinateChanged);
+
+    // The main coordinate is aliased to the exit (landing point) because that's the core of this complex item and the master for all transformations
+    connect(this,                       &LandingComplexItem::exitCoordinateChanged,         this, &LandingComplexItem::coordinateChanged);
 
     connect(this,                       &LandingComplexItem::finalApproachCoordinateChanged,this, &LandingComplexItem::_recalcFromCoordinateChange);
     connect(this,                       &LandingComplexItem::landingCoordinateChanged,      this, &LandingComplexItem::_recalcFromCoordinateChange);
@@ -118,11 +115,9 @@ void LandingComplexItem::setLandingCoordinate(const QGeoCoordinate& coordinate)
     if (coordinate != _landingCoordinate) {
         _landingCoordinate = coordinate;
         if (_landingCoordSet) {
-            emit exitCoordinateChanged(coordinate);
             emit landingCoordinateChanged(coordinate);
         } else {
             _ignoreRecalcSignals = true;
-            emit exitCoordinateChanged(coordinate);
             emit landingCoordinateChanged(coordinate);
             _ignoreRecalcSignals = false;
             _landingCoordSet = true;
@@ -136,7 +131,6 @@ void LandingComplexItem::setFinalApproachCoordinate(const QGeoCoordinate& coordi
 {
     if (coordinate != _finalApproachCoordinate) {
         _finalApproachCoordinate = coordinate;
-        emit coordinateChanged(coordinate);
         emit finalApproachCoordinateChanged(coordinate);
     }
 }
@@ -185,7 +179,6 @@ void LandingComplexItem::_recalcFromHeadingAndDistanceChange(void)
         _ignoreRecalcSignals = true;
         emit slopeStartCoordinateChanged(_slopeStartCoordinate);
         emit finalApproachCoordinateChanged(_finalApproachCoordinate);
-        emit coordinateChanged(_finalApproachCoordinate);
         _calcGlideSlope();
         _ignoreRecalcSignals = false;
     }
@@ -213,22 +206,21 @@ void LandingComplexItem::_recalcFromRadiusChange(void)
             // Degnenerate case: Move tangent to loiter point
             _slopeStartCoordinate = _finalApproachCoordinate;
 
-            double heading = _landingCoordinate.azimuthTo(_slopeStartCoordinate);
+            double slopeStartHeading = _landingCoordinate.azimuthTo(_slopeStartCoordinate);
 
             _ignoreRecalcSignals = true;
-            landingHeading()->setRawValue(heading);
+            landingHeading()->setRawValue(slopeStartHeading);
             emit slopeStartCoordinateChanged(_slopeStartCoordinate);
             _ignoreRecalcSignals = false;
         } else {
-            double landToLoiterDistance = qSqrt(qPow(radius, 2) + qPow(distance, 2));
-            double angleLoiterToTangent = qRadiansToDegrees(qAsin(radius/landToLoiterDistance)) * (_loiterClockwise()->rawValue().toBool() ? -1 : 1);
+            double loiterDistance = qSqrt(qPow(radius, 2) + qPow(distance, 2));
+            double angleLoiterToTangent = qRadiansToDegrees(qAsin(radius/loiterDistance)) * (_loiterClockwise()->rawValue().toBool() ? -1 : 1);
 
-            _finalApproachCoordinate = _landingCoordinate.atDistanceAndAzimuth(landToLoiterDistance, heading + 180 + angleLoiterToTangent);
+            _finalApproachCoordinate = _landingCoordinate.atDistanceAndAzimuth(loiterDistance, heading + 180 + angleLoiterToTangent);
             _finalApproachCoordinate.setAltitude(finalApproachAltitude()->rawValue().toDouble());
 
             _ignoreRecalcSignals = true;
             emit finalApproachCoordinateChanged(_finalApproachCoordinate);
-            emit coordinateChanged(_finalApproachCoordinate);
             _ignoreRecalcSignals = false;
         }
     }
@@ -261,7 +253,6 @@ void LandingComplexItem::_recalcFromApproachModeChange(void)
 
         _ignoreRecalcSignals = true;
         emit finalApproachCoordinateChanged(_finalApproachCoordinate);
-        emit coordinateChanged(_finalApproachCoordinate);
         _calcGlideSlope();
         _ignoreRecalcSignals = false;
     }
@@ -643,6 +634,19 @@ void LandingComplexItem::_setDirty(void)
     setDirty(true);
 }
 
+void LandingComplexItem::setCoordinate(const QGeoCoordinate& coordinate) {
+    if (!_landingCoordSet) {
+        setLandingCoordinate(coordinate);
+        return;
+    }
+
+    // Move entire complex item, preserving heading and distance
+    _ignoreRecalcSignals = true;
+    setLandingCoordinate(coordinate);
+    _ignoreRecalcSignals = false;
+    _recalcFromHeadingAndDistanceChange();
+}
+
 void LandingComplexItem::setSequenceNumber(int sequenceNumber)
 {
     if (_sequenceNumber != sequenceNumber) {
@@ -650,6 +654,11 @@ void LandingComplexItem::setSequenceNumber(int sequenceNumber)
         emit sequenceNumberChanged(sequenceNumber);
         emit lastSequenceNumberChanged(lastSequenceNumber());
     }
+}
+
+double LandingComplexItem::editableAlt() const
+{
+    return finalApproachAltitude()->rawValue().toDouble();
 }
 
 double LandingComplexItem::amslEntryAlt(void) const
@@ -672,7 +681,6 @@ void LandingComplexItem::_updateFinalApproachCoodinateAltitudeFromFact(void)
 {
     _finalApproachCoordinate.setAltitude(finalApproachAltitude()->rawValue().toDouble());
     emit finalApproachCoordinateChanged(_finalApproachCoordinate);
-    emit coordinateChanged(_finalApproachCoordinate);
 }
 
 void LandingComplexItem::_updateLandingCoodinateAltitudeFromFact(void)
@@ -738,10 +746,10 @@ bool LandingComplexItem::_load(const QJsonObject& complexObject, int sequenceNum
     }
 
     if (!complexObject.contains(_jsonDeprecatedLoiterCoordinateKey) && !complexObject.contains(_jsonFinalApproachCoordinateKey)) {
-        QList<JsonHelper::KeyValidateInfo> keyInfoList = {
+        QList<JsonHelper::KeyValidateInfo> finalApproachKeyInfoList = {
             { _jsonFinalApproachCoordinateKey, QJsonValue::Array, true },
         };
-        if (!JsonHelper::validateKeys(complexObject, keyInfoList, errorString)) {
+        if (!JsonHelper::validateKeys(complexObject, finalApproachKeyInfoList, errorString)) {
             return false;
         }
     }
@@ -818,7 +826,9 @@ bool LandingComplexItem::_load(const QJsonObject& complexObject, int sequenceNum
     _ignoreRecalcSignals    = false;
 
     _recalcFromCoordinateChange();
-    emit coordinateChanged(this->coordinate());    // This will kick off terrain query
+    // These will kick off terrain query
+    emit finalApproachCoordinateChanged(_finalApproachCoordinate);
+    emit landingCoordinateChanged(_landingCoordinate);
 
     return true;
 }

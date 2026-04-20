@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 import QtQuick
 import QtQuick.Controls
 import QtCharts
@@ -14,10 +5,7 @@ import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
-
 import QGroundControl.FactControls
-
-
 
 RowLayout {
     spacing: _margins
@@ -31,6 +19,7 @@ RowLayout {
     property double chartDisplaySec:    8 // number of seconds to display
     property bool   showAutoModeChange: false
     property bool   showAutoTuning:     false
+    property bool   useAutoTuning:      false
 
     property real   _margins:           ScreenTools.defaultFontPixelHeight / 2
     property int    _currentAxis:       0
@@ -181,6 +170,7 @@ RowLayout {
 
     Column {
         id:                 leftPanel
+        Layout.fillWidth:   true
         Layout.alignment:   Qt.AlignTop
         spacing:            ScreenTools.defaultFontPixelHeight / 4
         clip:               true // chart has redraw problems
@@ -345,13 +335,16 @@ RowLayout {
                 model: axis
 
                 Repeater {
+                    id: paramRepeater
                     model: axis[index].params
+
+                    property int axisIndex: index
 
                     SettingsGroupLayout {
                         id:                     tuningGroup
                         heading:                title
                         headingDescription:     description
-                        visible:                _currentAxis === index
+                        visible:                _currentAxis === paramRepeater.axisIndex
                         Layout.preferredWidth:  ScreenTools.defaultFontPixelWidth * 40
 
                         FactSlider {

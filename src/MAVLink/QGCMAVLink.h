@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include <QtCore/QList>
@@ -15,14 +6,24 @@
 #include <QtCore/QString>
 #include <QtQmlIntegration/QtQmlIntegration>
 
-#include "MAVLinkLib.h"
+#include "MAVLinkEnums.h"
+#include "MAVLinkMessageType.h"
+#include "QGCMAVLinkTypes.h"
+
+// Forward declare - only used by reference in highLatencyFailuresToMavSysStatus()
+typedef struct __mavlink_high_latency2_t mavlink_high_latency2_t;
+
+// From mavlink_msg_param_ext_set.h - avoids pulling in the full message header
+#ifndef MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN
+#define MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN 128
+#endif
 
 Q_DECLARE_LOGGING_CATEGORY(QGCMAVLinkLog)
 // Q_DECLARE_METATYPE(mavlink_message_t)
 Q_DECLARE_METATYPE(MAV_TYPE)
 Q_DECLARE_METATYPE(MAV_AUTOPILOT)
 
-class QGCMAVLink : public QObject
+class QGCMAVLink : public QObject, public QGCMAVLinkTypes
 {
     Q_OBJECT
     QML_NAMED_ELEMENT(MAVLink)
@@ -33,8 +34,7 @@ public:
     QGCMAVLink(QObject *parent = nullptr);
     ~QGCMAVLink();
 
-    typedef int FirmwareClass_t;
-    typedef int VehicleClass_t;
+    // FirmwareClass_t, VehicleClass_t, VehicleClassGeneric, maxRcChannels inherited from QGCMAVLinkTypes
 
     static constexpr const FirmwareClass_t FirmwareClassPX4       = MAV_AUTOPILOT_PX4;
     static constexpr const FirmwareClass_t FirmwareClassArduPilot = MAV_AUTOPILOT_ARDUPILOTMEGA;
@@ -47,9 +47,8 @@ public:
     static constexpr const VehicleClass_t VehicleClassSpacecraft  = MAV_TYPE_SPACECRAFT_ORBITER;
     static constexpr const VehicleClass_t VehicleClassMultiRotor  = MAV_TYPE_QUADROTOR;
     static constexpr const VehicleClass_t VehicleClassVTOL        = MAV_TYPE_VTOL_TAILSITTER_QUADROTOR;
-    static constexpr const VehicleClass_t VehicleClassGeneric     = MAV_TYPE_GENERIC;
-
-    static constexpr const uint8_t        maxRcChannels           = 18; // mavlink_rc_channels_t->chancount
+    // VehicleClassGeneric inherited from QGCMAVLinkTypes
+    static_assert(QGCMAVLinkTypes::VehicleClassGeneric == MAV_TYPE_GENERIC, "VehicleClassGeneric value mismatch");
 
     static bool                     isPX4FirmwareClass          (MAV_AUTOPILOT autopilot) { return autopilot == MAV_AUTOPILOT_PX4; }
     static bool                     isArduPilotFirmwareClass    (MAV_AUTOPILOT autopilot) { return autopilot == MAV_AUTOPILOT_ARDUPILOTMEGA; }
@@ -86,6 +85,15 @@ public:
 
     // Expose mavlink enums to Qml. I've tried various way to make this work without duping, but haven't found anything that works.
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4456)
+#endif
+
     enum MAV_BATTERY_FUNCTION {
         MAV_BATTERY_FUNCTION_UNKNOWN=0, /* Battery function is unknown | */
         MAV_BATTERY_FUNCTION_ALL=1, /* Battery supports all flight systems | */
@@ -107,6 +115,13 @@ public:
        MAV_BATTERY_CHARGE_STATE_CHARGING=7, /* Battery is charging. | */
     };
     Q_ENUM(MAV_BATTERY_CHARGE_STATE)
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
     /// Sensor bits from sensors*Bits properties
     enum MavlinkSysStatus {
@@ -140,9 +155,9 @@ public:
     Q_ENUM(MavlinkSysStatus)
 
     enum GripperActions {
-        GripperActionOpen     = GRIPPER_ACTION_OPEN,
-        GripperActionClose    = GRIPPER_ACTION_CLOSE,
-        GripperActionStop     = GRIPPER_ACTION_STOP,
+        GripperActionRelease  = GRIPPER_ACTION_RELEASE,
+        GripperActionGrab     = GRIPPER_ACTION_GRAB,
+        GripperActionHold     = GRIPPER_ACTION_HOLD,
         GripperOptionInvalid  = GRIPPER_ACTIONS_ENUM_END,
     };
     Q_ENUM(GripperActions)

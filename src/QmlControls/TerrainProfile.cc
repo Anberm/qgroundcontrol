@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "TerrainProfile.h"
 #include "MissionController.h"
 #include "QmlObjectListModel.h"
@@ -45,7 +36,7 @@ void TerrainProfile::setMissionController(MissionController* missionController)
 
         emit missionControllerChanged();
 
-        connect(_missionController, &MissionController::visualItemsChanged,         this, &TerrainProfile::_newVisualItems);
+        connect(_missionController, &MissionController::visualItemsReset,           this, &TerrainProfile::_newVisualItems);
 
         connect(this,               &TerrainProfile::visibleWidthChanged,           this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);
         connect(_missionController, &MissionController::recalcTerrainProfile,       this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);

@@ -34,6 +34,9 @@ qt_add_plugin(QGCLocation
     QGCMapUrlEngine.cpp
     QGCMapUrlEngine.h
     QGCTile.h
+    QGCTileCacheDatabase.cpp
+    QGCTileCacheDatabase.h
+    QGCTileCacheTypes.h
     QGCTileCacheWorker.cpp
     QGCTileCacheWorker.h
     QGCTileSet.h
@@ -83,10 +86,11 @@ target_include_directories(QGCLocation
         ${CMAKE_CURRENT_SOURCE_DIR}/../Terrain/Providers
         ${CMAKE_CURRENT_SOURCE_DIR}/../Settings
         ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities/Compression
         ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities/FileSystem
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities/Logging
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities/Network
         Providers
 )
-
-set_source_files_properties(QMLControl/OfflineMapEditor.qml PROPERTIES QT_RESOURCE_ALIAS OfflineMapEditor.qml)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE QGCLocation)

@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "FixedWingLandingComplexItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
@@ -38,7 +29,7 @@ FixedWingLandingComplexItem::FixedWingLandingComplexItem(PlanMasterController* m
     , _stopTakingVideoFact      (settingsGroup, _metaDataMap[stopTakingVideoName])
     , _valueSetIsDistanceFact   (settingsGroup, _metaDataMap[valueSetIsDistanceName])
 {
-    _editorQml      = "qrc:/qml/QGroundControl/Controls/FWLandingPatternEditor.qml";
+    _editorQml      = "qrc:/qml/QGroundControl/PlanView/FWLandingPatternEditor.qml";
     _isIncomplete   = false;
 
     _init();
@@ -133,16 +124,6 @@ void FixedWingLandingComplexItem::_calcGlideSlope(void)
     double landingDistance = _landingDistanceFact.rawValue().toDouble();
 
     _glideSlopeFact.setRawValue(qRadiansToDegrees(qAtan(landingAltDifference / landingDistance)));
-}
-
-void FixedWingLandingComplexItem::moveLandingPosition(const QGeoCoordinate& coordinate)
-{
-    double savedHeading = landingHeading()->rawValue().toDouble();
-    double savedDistance = landingDistance()->rawValue().toDouble();
-
-    setLandingCoordinate(coordinate);
-    landingHeading()->setRawValue(savedHeading);
-    landingDistance()->setRawValue(savedDistance);
 }
 
 bool FixedWingLandingComplexItem::_isValidLandItem(const MissionItem& missionItem)

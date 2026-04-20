@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include <QtCore/QSettings>
@@ -14,8 +5,9 @@
 #include <QtQmlIntegration/QtQmlIntegration>
 
 #include "QmlObjectListModel.h"
-#include "QGCMAVLink.h"
-#include "Vehicle.h"
+#include "QGCMAVLinkTypes.h"
+
+class Vehicle;
 
 class InstrumentValueData;
 
@@ -56,7 +48,7 @@ public:
     QString                     settingsGroup           (void) const { return _settingsGroup; }
     FontSize                    fontSize                (void) const { return _fontSize; }
     QStringList                 iconNames               (void) const { return _iconNames; }
-    QGCMAVLink::VehicleClass_t  vehicleClass            (void) const;
+    QGCMAVLinkTypes::VehicleClass_t  vehicleClass            (void) const;
     Vehicle*                    currentVehicle          (void) const { return _specificVehicleForCard ? _specificVehicleForCard : _activeVehicle; }
     Vehicle*                    specificVehicleForCard  (void) const { return _specificVehicleForCard; }
 

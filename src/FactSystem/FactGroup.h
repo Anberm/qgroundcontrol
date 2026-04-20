@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -17,7 +8,7 @@
 #include <QtQmlIntegration/QtQmlIntegration>
 
 #include "Fact.h"
-#include "MAVLinkLib.h"
+#include "MAVLinkMessageType.h"
 
 class Vehicle;
 
@@ -58,7 +49,7 @@ public:
     const QMap<QString, FactGroup*> &factGroups() const { return _nameToFactGroupMap; }
 
     /// Allows a FactGroup to parse incoming messages and fill in values
-    virtual void handleMessage(Vehicle *vehicle, const mavlink_message_t &message) {}
+    virtual void handleMessage(Vehicle * /*vehicle*/, const mavlink_message_t & /*message*/) {}
 
 signals:
     void factNamesChanged();

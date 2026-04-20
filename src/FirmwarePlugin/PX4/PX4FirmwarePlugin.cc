@@ -1,25 +1,19 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "PX4FirmwarePlugin.h"
+#include "ParameterMetaData.h"
 #include "PX4ParameterMetaData.h"
 #include "QGCApplication.h"
 #include "PX4AutoPilotPlugin.h"
+#include "QGCLoggingCategory.h"
 #include "SettingsManager.h"
 #include "PlanViewSettings.h"
 #include "ParameterManager.h"
 #include "Vehicle.h"
 
-#include <QDebug>
-#include <QString>
+#include <QtCore/QString>
 
 #include "px4_custom_mode.h"
+
+QGC_LOGGING_CATEGORY(PX4FirmwarePluginLog, "FirmwarePlugin.PX4FirmwarePlugin")
 
 PX4FirmwarePluginInstanceData::PX4FirmwarePluginInstanceData(QObject* parent)
     : FirmwarePluginInstanceData(parent)
@@ -150,7 +144,7 @@ bool PX4FirmwarePlugin::setFlightMode(const QString& flightMode, uint8_t* base_m
     }
 
     if (!found) {
-        qWarning() << "Unknown flight Mode" << flightMode;
+        qCWarning(PX4FirmwarePluginLog) << "Unknown flight Mode" << flightMode;
     }
 
     return found;
@@ -182,24 +176,6 @@ bool PX4FirmwarePlugin::sendHomePositionToVehicle(void) const
     // PX4 stack does not want home position sent in the first position.
     // Subsequent sequence numbers must be adjusted.
     return false;
-}
-
-FactMetaData* PX4FirmwarePlugin::_getMetaDataForFact(QObject* parameterMetaData, const QString& name, FactMetaData::ValueType_t type, MAV_TYPE vehicleType) const
-{
-    PX4ParameterMetaData* px4MetaData = qobject_cast<PX4ParameterMetaData*>(parameterMetaData);
-
-    if (px4MetaData) {
-        return px4MetaData->getMetaDataForFact(name, vehicleType, type);
-    } else {
-        qWarning() << "Internal error: pointer passed to PX4FirmwarePlugin::getMetaDataForFact not PX4ParameterMetaData";
-    }
-
-    return nullptr;
-}
-
-void PX4FirmwarePlugin::_getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion) const
-{
-    return PX4ParameterMetaData::getParameterMetaDataVersionInfo(metaDataFile, majorVersion, minorVersion);
 }
 
 QList<MAV_CMD> PX4FirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const
@@ -269,18 +245,14 @@ QString PX4FirmwarePlugin::missionCommandOverrides(QGCMAVLink::VehicleClass_t ve
     case QGCMAVLink::VehicleClassRoverBoat:
         return QStringLiteral(":/json/PX4-MavCmdInfoRover.json");
     default:
-        qWarning() << "PX4FirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
+        qCWarning(PX4FirmwarePluginLog) << "PX4FirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
         return QString();
     }
 }
 
-QObject* PX4FirmwarePlugin::_loadParameterMetaData(const QString& metaDataFile)
+ParameterMetaData* PX4FirmwarePlugin::_createParameterMetaData()
 {
-    PX4ParameterMetaData* metaData = new PX4ParameterMetaData(this);
-    if (!metaDataFile.isEmpty()) {
-        metaData->loadParameterFactMetaDataFile(metaDataFile);
-    }
-    return metaData;
+    return new PX4ParameterMetaData(this);
 }
 
 void PX4FirmwarePlugin::pauseVehicle(Vehicle* vehicle) const
@@ -314,7 +286,7 @@ void PX4FirmwarePlugin::_mavCommandResult(int vehicleId, int component, int comm
 
     auto* vehicle = qobject_cast<Vehicle*>(sender());
     if (!vehicle) {
-        qWarning() << "Dynamic cast failed!";
+        qCWarning(PX4FirmwarePluginLog) << "Dynamic cast failed!";
         return;
     }
 
@@ -350,7 +322,7 @@ void PX4FirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffAltRel
         static_cast<float>(takeoffAltAMSL));    // AMSL altitude
 }
 
-double PX4FirmwarePlugin::maximumHorizontalSpeedMultirotor(Vehicle* vehicle) const
+double PX4FirmwarePlugin::maximumHorizontalSpeedMultirotorMetersSecond(Vehicle* vehicle) const
 {
     QString speedParam("MPC_XY_VEL_MAX");
 
@@ -358,7 +330,7 @@ double PX4FirmwarePlugin::maximumHorizontalSpeedMultirotor(Vehicle* vehicle) con
         return vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, speedParam)->rawValue().toDouble();
     }
 
-    return FirmwarePlugin::maximumHorizontalSpeedMultirotor(vehicle);
+    return FirmwarePlugin::maximumHorizontalSpeedMultirotorMetersSecond(vehicle);
 }
 
 double PX4FirmwarePlugin::maximumEquivalentAirspeed(Vehicle* vehicle) const
@@ -394,7 +366,7 @@ bool PX4FirmwarePlugin::fixedWingAirSpeedLimitsAvailable(Vehicle* vehicle) const
             vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "FW_AIRSPD_MAX");
 }
 
-void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord, double forwardFlightLoiterRadius) const
+bool PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord, double forwardFlightLoiterRadius) const
 {
     // PX4 doesn't support setting the forward flight loiter radius of
     // MAV_CMD_DO_REPOSITION
@@ -402,7 +374,7 @@ void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoord
 
     if (qIsNaN(vehicle->altitudeAMSL()->rawValue().toDouble())) {
         qgcApp()->showAppMessage(tr("Unable to go to location, vehicle position not known."));
-        return;
+        return false;
     }
 
     if (vehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_COMMAND_INT) {
@@ -429,6 +401,8 @@ void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoord
                                 static_cast<float>(gotoCoord.longitude()),
                                 vehicle->altitudeAMSL()->rawValue().toFloat());
     }
+
+    return true;
 }
 
 typedef struct {
@@ -442,13 +416,13 @@ static void _pauseVehicleThenChangeAltResultHandler(void* resultHandlerData, int
     if (ack.result != MAV_RESULT_ACCEPTED) {
         switch (failureCode) {
         case Vehicle::MavCmdResultCommandResultOnly:
-            qDebug() << QStringLiteral("MAV_CMD_DO_REPOSITION error(%1)").arg(ack.result);
+            qCDebug(PX4FirmwarePluginLog) << QStringLiteral("MAV_CMD_DO_REPOSITION error(%1)").arg(ack.result);
             break;
         case Vehicle::MavCmdResultFailureNoResponseToCommand:
-            qDebug() << "MAV_CMD_DO_REPOSITION no response from vehicle";
+            qCDebug(PX4FirmwarePluginLog) << "MAV_CMD_DO_REPOSITION no response from vehicle";
             break;
         case Vehicle::MavCmdResultFailureDuplicateCommand:
-            qDebug() << "Internal Error: MAV_CMD_DO_REPOSITION could not be sent due to duplicate command";
+            qCDebug(PX4FirmwarePluginLog) << "Internal Error: MAV_CMD_DO_REPOSITION could not be sent due to duplicate command";
             break;
         }
     }
@@ -821,7 +795,7 @@ void PX4FirmwarePlugin::updateAvailableFlightModes(FlightModeList &modeList)
     _updateFlightModeList(modeList);
 }
 
-QVariant PX4FirmwarePlugin::expandedToolbarIndicatorSource(const Vehicle* vehicle, const QString& indicatorName) const
+QVariant PX4FirmwarePlugin::expandedToolbarIndicatorSource(const Vehicle* /*vehicle*/, const QString& indicatorName) const
 {
     if (indicatorName == "Battery") {
         return QVariant::fromValue(QUrl::fromUserInput("qrc:/qml/QGroundControl/FirmwarePlugin/PX4/PX4BatteryIndicator.qml"));

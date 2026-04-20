@@ -1,20 +1,15 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "GimbalController.h"
 #include "GimbalControllerSettings.h"
+#include "MAVLinkLib.h"
 #include "MAVLinkProtocol.h"
 #include "ParameterManager.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
 #include "SettingsManager.h"
 #include "Vehicle.h"
+#include <cmath>
+#include "Gimbal.h"
+#include "QGCCameraManager.h"
 
 QGC_LOGGING_CATEGORY(GimbalControllerLog, "Gimbal.GimbalController")
 
@@ -25,6 +20,7 @@ GimbalController::GimbalController(Vehicle *vehicle)
 {
     qCDebug(GimbalControllerLog) << this;
 
+    (void) connect(_vehicle, &Vehicle::initialConnectComplete, this, &GimbalController::_initialConnectCompleted, Qt::UniqueConnection);
     (void) connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &GimbalController::_mavlinkMessageReceived);
 
     _rateSenderTimer.setInterval(500);
@@ -36,10 +32,15 @@ GimbalController::~GimbalController()
     qCDebug(GimbalControllerLog) << this;
 }
 
+void GimbalController::_initialConnectCompleted()
+{
+    _initialConnectComplete = true;
+}
+
 void GimbalController::setActiveGimbal(Gimbal *gimbal)
 {
     if (!gimbal) {
-        qCDebug(GimbalControllerLog) << "Set active gimbal: attempted to set a nullptr, returning";
+        qCCritical(GimbalControllerLog) << "Set active gimbal: attempted to set a nullptr, returning";
         return;
     }
 
@@ -52,9 +53,7 @@ void GimbalController::setActiveGimbal(Gimbal *gimbal)
 
 void GimbalController::_mavlinkMessageReceived(const mavlink_message_t &message)
 {
-    // Don't proceed until parameters are ready, otherwise the gimbal controller handshake
-    // could potentially not work due to the high traffic for parameters, mission download, etc
-    if (!_vehicle->parameterManager()->parametersReady()) {
+    if (!_initialConnectComplete) {
         return;
     }
 
@@ -203,7 +202,7 @@ void GimbalController::_handleGimbalDeviceAttitudeStatus(const mavlink_message_t
 
         // We do a reverse lookup here
         const auto foundGimbal = std::find_if(_potentialGimbals.begin(), _potentialGimbals.end(),
-                     [this, pairId](Gimbal *gimbal) { return (gimbal->deviceId()->rawValue().toUInt() == pairId.deviceId); });
+                     [pairId](Gimbal *gimbal) { return (gimbal->deviceId()->rawValue().toUInt() == pairId.deviceId); });
 
         if (foundGimbal == _potentialGimbals.constEnd()) {
             qCDebug(GimbalControllerLog) << "_handleGimbalDeviceAttitudeStatus for unknown device id:"
@@ -346,7 +345,7 @@ void GimbalController::_checkComplete(Gimbal &gimbal, GimbalPairId pairId)
 bool GimbalController::_tryGetGimbalControl()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "_tryGetGimbalControl: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "_tryGetGimbalControl: active gimbal is nullptr, returning";
         return false;
     }
 
@@ -377,7 +376,7 @@ bool GimbalController::_yawInVehicleFrame(uint32_t flags)
 void GimbalController::gimbalPitchStart(int direction)
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalPitchStart: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalPitchStart: active gimbal is nullptr, returning";
         return;
     }
 
@@ -390,7 +389,7 @@ void GimbalController::gimbalPitchStart(int direction)
 void GimbalController::gimbalYawStart(int direction)
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalYawStart: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalYawStart: active gimbal is nullptr, returning";
         return;
     }
 
@@ -402,7 +401,7 @@ void GimbalController::gimbalYawStart(int direction)
 void GimbalController::gimbalPitchStop()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalPitchStop: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalPitchStop: active gimbal is nullptr, returning";
         return;
     }
 
@@ -413,7 +412,7 @@ void GimbalController::gimbalPitchStop()
 void GimbalController::gimbalYawStop()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalYawStop: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalYawStop: active gimbal is nullptr, returning";
         return;
     }
 
@@ -424,24 +423,24 @@ void GimbalController::gimbalYawStop()
 void GimbalController::centerGimbal()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalYawStep: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalYawStep: active gimbal is nullptr, returning";
         return;
     }
     sendPitchBodyYaw(0.0, 0.0, true);
 }
 
-void GimbalController::gimbalOnScreenControl(float panPct, float tiltPct, bool clickAndPoint, bool clickAndDrag, bool rateControl, bool retract, bool neutral, bool yawlock)
+void GimbalController::gimbalOnScreenControl(float panPct, float tiltPct, bool clickAndPoint, bool clickAndDrag, bool /*rateControl*/, bool /*retract*/, bool /*neutral*/, bool /*yawlock*/)
 {
     // Pan and tilt comes as +-(0-1)
 
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "gimbalOnScreenControl: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "gimbalOnScreenControl: active gimbal is nullptr, returning";
         return;
     }
 
     if (clickAndPoint) { // based on FOV
-        const float hFov = SettingsManager::instance()->gimbalControllerSettings()->CameraHFov()->rawValue().toFloat();
-        const float vFov = SettingsManager::instance()->gimbalControllerSettings()->CameraVFov()->rawValue().toFloat();
+        const float hFov = SettingsManager::instance()->gimbalControllerSettings()->cameraHFov()->rawValue().toFloat();
+        const float vFov = SettingsManager::instance()->gimbalControllerSettings()->cameraVFov()->rawValue().toFloat();
 
         const float panIncDesired = panPct * hFov * 0.5f;
         const float tiltIncDesired = tiltPct * vFov * 0.5f;
@@ -458,7 +457,7 @@ void GimbalController::gimbalOnScreenControl(float panPct, float tiltPct, bool c
         // Should send rate commands, but it seems for some reason it is not working on AP side.
         // Pitch works ok but yaw doesn't stop, it keeps like inertia, like if it was buffering the messages.
         // So we do a workaround with angle targets
-        const float maxSpeed = SettingsManager::instance()->gimbalControllerSettings()->CameraSlideSpeed()->rawValue().toFloat();
+        const float maxSpeed = SettingsManager::instance()->gimbalControllerSettings()->cameraSlideSpeed()->rawValue().toFloat();
 
         const float panIncDesired = panPct * maxSpeed * 0.1f;
         const float tiltIncDesired = tiltPct * maxSpeed * 0.1f;
@@ -591,6 +590,62 @@ void GimbalController::sendRate()
     }
 }
 
+void GimbalController::sendGimbalRate(float pitch_rate_deg_s, float yaw_rate_deg_s)
+{
+    if (!_tryGetGimbalControl()) {
+        return;
+    }
+
+    _sendGimbalAttitudeRates(pitch_rate_deg_s, yaw_rate_deg_s);
+
+    if (pitch_rate_deg_s == 0.f && yaw_rate_deg_s == 0.f) {
+        _rateSenderTimer.stop();
+    } else {
+        _rateSenderTimer.start();
+    }
+}
+
+void GimbalController::_sendGimbalAttitudeRates(float pitch_rate_deg_s,
+                                                float yaw_rate_deg_s)
+{
+
+    auto sharedLink = _vehicle->vehicleLinkManager()->primaryLink().lock();
+    if (!sharedLink) {
+        qCDebug(GimbalControllerLog) << "_sendGimbalAttitudeRates: primary link gone!";
+        return;
+    }
+
+    uint32_t flags =
+        GIMBAL_MANAGER_FLAGS_ROLL_LOCK |
+        GIMBAL_MANAGER_FLAGS_PITCH_LOCK |
+        GIMBAL_MANAGER_FLAGS_YAW_IN_VEHICLE_FRAME;   // use vehicle/body frame
+
+    // Preserve current yaw-lock state instead of changing it:
+    if (_activeGimbal->yawLock()) {
+        flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
+    }
+
+    const float qnan[4] = {NAN, NAN, NAN, NAN};
+    mavlink_message_t msg;
+
+    mavlink_msg_gimbal_manager_set_attitude_pack_chan(
+        MAVLinkProtocol::instance()->getSystemId(),
+        MAVLinkProtocol::getComponentId(),
+        sharedLink->mavlinkChannel(),
+        &msg,
+        _vehicle->id(),
+        static_cast<uint8_t>(_activeGimbal->managerCompid()->rawValue().toUInt()),
+        flags,
+        static_cast<uint8_t>(_activeGimbal->deviceId()->rawValue().toUInt()),
+        qnan,
+        NAN,
+        qDegreesToRadians(pitch_rate_deg_s),
+        qDegreesToRadians(yaw_rate_deg_s)
+    );
+
+    _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
+}
+
 void GimbalController::_rateSenderTimeout()
 {
     // Send rate again to avoid timeout on autopilot side.
@@ -632,7 +687,7 @@ void GimbalController::sendPitchYawFlags(uint32_t flags)
 void GimbalController::acquireGimbalControl()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "acquireGimbalControl: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "acquireGimbalControl: active gimbal is nullptr, returning";
         return;
     }
 
@@ -652,7 +707,7 @@ void GimbalController::acquireGimbalControl()
 void GimbalController::releaseGimbalControl()
 {
     if (!_activeGimbal) {
-        qCDebug(GimbalControllerLog) << "releaseGimbalControl: active gimbal is nullptr, returning";
+        qCCritical(GimbalControllerLog) << "releaseGimbalControl: active gimbal is nullptr, returning";
         return;
     }
 

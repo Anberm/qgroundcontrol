@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "RTCMMavlink.h"
 #include "MAVLinkProtocol.h"
 #include "MultiVehicleManager.h"
@@ -30,9 +21,7 @@ RTCMMavlink::~RTCMMavlink()
 
 void RTCMMavlink::RTCMDataUpdate(QByteArrayView data)
 {
-#ifdef QT_DEBUG
     _calculateBandwith(data.size());
-#endif
 
     mavlink_gps_rtcm_data_t gpsRtcmData{};
 

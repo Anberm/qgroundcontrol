@@ -1,16 +1,8 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include "FirmwarePlugin.h"
-#include "MAVLinkLib.h"
+#include "MAVLinkEnums.h"
+#include "MAVLinkMessageType.h"
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -59,4 +51,3 @@ private:
 
     FlightModeList _modeList;
 };
-

@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include "LinkConfiguration.h"
@@ -21,13 +12,6 @@
 
 #include <atomic>
 
-#ifdef QGC_ZEROCONF_ENABLED
-#ifdef Q_OS_WIN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <dns_sd.h>
-#endif
-
 class QUdpSocket;
 class QThread;
 
@@ -37,9 +21,9 @@ Q_DECLARE_LOGGING_CATEGORY(UDPLinkLog)
 
 struct UDPClient
 {
-    UDPClient(const QHostAddress &address, quint16 port)
-        : address(address)
-        , port(port)
+    UDPClient(const QHostAddress &addr, quint16 portNum)
+        : address(addr)
+        , port(portNum)
     {}
 
     explicit UDPClient(const UDPClient *other)
@@ -152,14 +136,6 @@ private:
     QSet<QHostAddress> _localAddresses;
 
     static const QHostAddress _multicastGroup;
-
-#ifdef QGC_ZEROCONF_ENABLED
-    void _registerZeroconf(uint16_t port);
-    void _deregisterZeroconf();
-    static void _zeroconfRegisterCallback(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context);
-
-    DNSServiceRef _dnssServiceRef = nullptr;
-#endif
 };
 
 /*===========================================================================*/

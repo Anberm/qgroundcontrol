@@ -7,6 +7,8 @@ target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         Autotune.cpp
         Autotune.h
+        FTPController.cc
+        FTPController.h
         FTPManager.cc
         FTPManager.h
         InitialConnectStateMachine.cc
@@ -29,6 +31,9 @@ target_sources(${CMAKE_PROJECT_NAME}
         VehicleLinkManager.h
         VehicleObjectAvoidance.cc
         VehicleObjectAvoidance.h
+        VehicleSupports.cc
+        VehicleSupports.h
+        VehicleTypes.h
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

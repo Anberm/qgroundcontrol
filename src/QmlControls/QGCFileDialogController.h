@@ -1,13 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
-
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -46,4 +36,22 @@ public:
     /// Returns the standard QGC location portion of a fully qualified folder path.
     /// Example: "/Users/Don/Document/QGroundControl/Missions" returns "QGroundControl/Missions"
     Q_INVOKABLE static QString fullFolderPathToShortMobilePath(const QString &fullFolderPath);
+
+    /// Opens Android's native file picker (ACTION_OPEN_DOCUMENT).
+    /// On non-Android platforms this is a no-op.
+    Q_INVOKABLE void importFromNativePicker();
+
+signals:
+    /// Emitted when the selected file has been successfully imported to the Missions directory.
+    /// @param filePath Fully-qualified path of the imported file in the Missions directory.
+    void fileImported(const QString& filePath);
+
+    /// Emitted when the import operation fails.
+    /// @param errorMessage Human-readable description of the error.
+    void importFailed(const QString& errorMessage);
+
+private:
+#ifdef Q_OS_ANDROID
+    void _handleImportResult(const QString& filePath);
+#endif
 };

@@ -1,19 +1,12 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include <QtCore/QTimer>
 #include <QtQmlIntegration/QtQmlIntegration>
 
-#include "Vehicle.h"
+#include "VehicleTypes.h"
 #include "MAVLinkLib.h"
+
+class Vehicle;
 
 class Autotune : public QObject
 {
@@ -30,7 +23,7 @@ public:
 
     Q_INVOKABLE void autotuneRequest ();
 
-    static void ackHandler      (void* resultHandlerData,   int compId, const mavlink_command_ack_t& ack, Vehicle::MavCmdResultFailureCode_t failureCode);
+    static void ackHandler      (void* resultHandlerData,   int compId, const mavlink_command_ack_t& ack, VehicleTypes::MavCmdResultFailureCode_t failureCode);
     static void progressHandler (void* progressHandlerData, int compId, const mavlink_command_ack_t& ack);
 
     bool      autotuneInProgress () { return _autotuneInProgress; }

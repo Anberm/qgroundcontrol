@@ -9,8 +9,14 @@ target_sources(${CMAKE_PROJECT_NAME}
         ESP8266Component.h
         ESP8266ComponentController.cc
         ESP8266ComponentController.h
+        ScriptingComponent.cc
+        ScriptingComponent.h
         MotorComponent.cc
         MotorComponent.h
+        JoystickComponent.cc
+        JoystickComponent.h
+        PowerModulePresetController.cc
+        PowerModulePresetController.h
         RadioComponentController.cc
         RadioComponentController.h
         SyslinkComponent.cc
@@ -33,8 +39,18 @@ qt_add_qml_module(AutoPilotPluginsCommonModule
     QML_FILES
         ESP8266Component.qml
         ESP8266ComponentSummary.qml
+        ScriptingComponent.qml
+        JoystickComponentSummary.qml
         MotorComponent.qml
         RadioComponent.qml
         SyslinkComponent.qml
     NO_PLUGIN
+)
+
+# ----------------------------------------------------------------------------
+# Common AutoPilot Plugins Resources
+# ----------------------------------------------------------------------------
+qt_add_resources(${CMAKE_PROJECT_NAME} autopilot_plugin_common_resource
+    PREFIX "/json"
+    FILES PowerModulePresets.json
 )

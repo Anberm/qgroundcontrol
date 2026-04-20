@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "VTOLLandingComplexItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
@@ -39,7 +30,7 @@ VTOLLandingComplexItem::VTOLLandingComplexItem(PlanMasterController* masterContr
     , _stopTakingPhotosFact     (settingsGroup, _metaDataMap[stopTakingPhotosName])
     , _stopTakingVideoFact      (settingsGroup, _metaDataMap[stopTakingVideoName])
 {
-    _editorQml      = "qrc:/qml/QGroundControl/Controls/VTOLLandingPatternEditor.qml";
+    _editorQml      = "qrc:/qml/QGroundControl/PlanView/VTOLLandingPatternEditor.qml";
     _isIncomplete   = false;
 
     _init();

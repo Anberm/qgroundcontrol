@@ -1,15 +1,7 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "ActuatorTesting.h"
 #include "Common.h"
 #include "QGCApplication.h"
+#include "Vehicle.h"
 
 using namespace ActuatorTesting;
 
@@ -119,17 +111,17 @@ void ActuatorTest::setActive(bool active)
     _active = active;
 }
 
-void ActuatorTest::ackHandlerEntry(void* resultHandlerData, int /*compId*/, const mavlink_command_ack_t& ack, Vehicle::MavCmdResultFailureCode_t failureCode)
+void ActuatorTest::ackHandlerEntry(void* resultHandlerData, int /*compId*/, const mavlink_command_ack_t& ack, VehicleTypes::MavCmdResultFailureCode_t failureCode)
 {
     ActuatorTest* actuatorTest = (ActuatorTest*)resultHandlerData;
     actuatorTest->ackHandler(static_cast<MAV_RESULT>(ack.result), failureCode);
 }
 
-void ActuatorTest::ackHandler(MAV_RESULT commandResult, Vehicle::MavCmdResultFailureCode_t failureCode)
+void ActuatorTest::ackHandler(MAV_RESULT commandResult, VehicleTypes::MavCmdResultFailureCode_t failureCode)
 {
     // upon receiving an (n)ack, continuously cycle through the active actuators, one at a time
     _commandInProgress = false;
-    if (failureCode == Vehicle::MavCmdResultFailureNoResponseToCommand) {
+    if (failureCode == VehicleTypes::MavCmdResultFailureNoResponseToCommand) {
         // on timeout, just try the next one
         sendNext();
     } else if (commandResult == MAV_RESULT_ACCEPTED) {

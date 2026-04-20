@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #include "VideoSettings.h"
 #include "VideoManager.h"
 
@@ -14,6 +5,9 @@
 
 #ifdef QGC_GST_STREAMING
 #include "GStreamer.h"
+static constexpr bool kGstEnabled = true;
+#else
+static constexpr bool kGstEnabled = false;
 #endif
 #ifndef QGC_DISABLE_UVC
 #include "UVCReceiver.h"
@@ -48,7 +42,7 @@ DECLARE_SETTINGGROUP(Video, "Video")
     if (videoSourceList.count() == 0) {
         _noVideo = true;
         videoSourceList.append(videoSourceNoVideo);
-        setVisible(false);
+        setUserVisible(false);
     } else {
         videoSourceList.insert(0, videoDisabled);
     }
@@ -108,13 +102,7 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, forceVideoDecoder)
     if (!_forceVideoDecoderFact) {
         _forceVideoDecoderFact = _createSettingsFact(forceVideoDecoderName);
 
-        _forceVideoDecoderFact->setVisible(
-#ifdef QGC_GST_STREAMING
-            true
-#else
-            false
-#endif
-        );
+        _forceVideoDecoderFact->setUserVisible(kGstEnabled);
 
         connect(_forceVideoDecoderFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
@@ -126,13 +114,7 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, lowLatencyMode)
     if (!_lowLatencyModeFact) {
         _lowLatencyModeFact = _createSettingsFact(lowLatencyModeName);
 
-        _lowLatencyModeFact->setVisible(
-#ifdef QGC_GST_STREAMING
-            true
-#else
-            false
-#endif
-        );
+        _lowLatencyModeFact->setUserVisible(kGstEnabled);
 
         connect(_lowLatencyModeFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
@@ -144,13 +126,7 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, rtspTimeout)
     if (!_rtspTimeoutFact) {
         _rtspTimeoutFact = _createSettingsFact(rtspTimeoutName);
 
-        _rtspTimeoutFact->setVisible(
-#ifdef QGC_GST_STREAMING
-            true
-#else
-            false
-#endif
-        );
+        _rtspTimeoutFact->setUserVisible(kGstEnabled);
 
         connect(_rtspTimeoutFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }

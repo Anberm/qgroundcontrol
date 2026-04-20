@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -14,7 +5,7 @@
 #include <QtQmlIntegration/QtQmlIntegration>
 
 #include "Gimbal.h"
-#include "MAVLinkLib.h"
+#include "MAVLinkMessageType.h"
 
 Q_DECLARE_LOGGING_CATEGORY(GimbalControllerLog)
 
@@ -50,6 +41,11 @@ public:
     Q_INVOKABLE void releaseGimbalControl();
     Q_INVOKABLE void sendRate();
 
+    /// Send gimbal attitude rates directly without using active gimbal's rate properties
+    /// @param pitch_rate_deg_s Pitch rate in degrees per second
+    /// @param yaw_rate_deg_s Yaw rate in degrees per second
+    Q_INVOKABLE void sendGimbalRate(float pitch_rate_deg_s, float yaw_rate_deg_s);
+
 signals:
     void activeGimbalChanged();
     void showAcquireGimbalControlPopup(); // This triggers a popup in QML asking the user for aproval to take control
@@ -64,6 +60,7 @@ public slots:
     void gimbalYawStop();
 
 private slots:
+    void _initialConnectCompleted();
     void _mavlinkMessageReceived(const mavlink_message_t& message);
     void _rateSenderTimeout();
 
@@ -105,6 +102,8 @@ private:
     bool _tryGetGimbalControl();
     bool _yawInVehicleFrame(uint32_t flags);
 
+    void _sendGimbalAttitudeRates(float pitch_rate_deg_s, float yaw_rate_deg_s);
+
     QTimer _rateSenderTimer;
     Vehicle *_vehicle = nullptr;
     Gimbal *_activeGimbal = nullptr;
@@ -117,6 +116,7 @@ private:
 
     QMap<GimbalPairId, Gimbal*> _potentialGimbals;
     QmlObjectListModel *_gimbals = nullptr;
+    bool _initialConnectComplete = false;
 
     static constexpr const char *_gimbalFactGroupNamePrefix = "gimbal";
 };

@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 import QtQuick
 import QtQuick.Controls
 
@@ -36,8 +27,8 @@ Button {
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    innerText.height * 0.1
 
-    property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.windowTransparentText
-    property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.windowTransparentText : qgcPal.buttonHighlight
+    property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
+    property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.text : qgcPal.buttonHighlight
 
     signal dropped(int index)
 
@@ -98,7 +89,7 @@ Button {
                 sourceSize.width:           width
                 anchors.horizontalCenter:   parent.horizontalCenter
                 visible:                    source != "" && !modelData.fullColorIcon
-                
+
                 QGCColoredImage {
                     id:                         innerImageSecondColor
                     source:                     modelData.alternateIconSource
